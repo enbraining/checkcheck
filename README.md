@@ -19,22 +19,17 @@ API를 확장에서 직접 호출합니다.
 
 크롬 웹스토어에 등록된 확장이 아니므로, 압축 해제된 확장으로 직접 로드합니다.
 
-1. 이 저장소를 내려받습니다.
-   ```bash
-   git clone https://github.com/<your-username>/korean-spellcheck-extension.git
-   ```
-   또는 GitHub의 **Code → Download ZIP**으로 받아 압축을 풉니다.
+1. [**최신 릴리즈**](https://github.com/enbraining/checkcheck/releases/latest)에서
+   `checkcheck.zip`을 내려받아 압축을 풉니다.
 
 2. 크롬 주소창에 `chrome://extensions` 입력 후 이동합니다.
 
 3. 우측 상단 **개발자 모드(Developer mode)** 토글을 켭니다.
 
 4. **압축해제된 확장 프로그램을 로드합니다(Load unpacked)** 클릭 →
-   내려받은 `korean-spellcheck-extension` 폴더를 선택합니다.
+   압축을 푼 폴더를 선택합니다.
 
 5. 끝입니다. 아무 웹페이지의 입력창에 한글을 입력해 보세요.
-
-> 코드를 수정한 뒤에는 `chrome://extensions`에서 이 확장의 **새로고침(↺)** 버튼을 눌러 다시 로드하세요.
 
 ## 사용법
 
