@@ -1,0 +1,70 @@
+# 한글 맞춤법 검사기 (Chrome Extension)
+
+웹페이지 어디서든 한글 맞춤법을 검사하고 바로 교정해 주는 크롬 확장입니다.
+Slack·Discord 같은 입력창에서 타이핑을 멈추면 자동으로 오타에 빨간 밑줄을 긋고,
+클릭하면 교정 후보를 보여 줍니다.
+
+별도의 서버·백엔드가 필요 없습니다. 맞춤법 검사는 [바른한글(구 부산대 맞춤법 검사기)](https://nara-speller.co.kr)
+API를 확장에서 직접 호출합니다.
+
+## 기능
+
+- **자동 검사** — 입력창에 한글을 치고 잠시 멈추면(약 0.9초) 자동으로 검사
+- **인라인 하이라이트** — 틀린 부분에 빨간 물결 밑줄 (CSS Custom Highlight API, DOM 비침투)
+- **클릭 교정** — 밑줄을 클릭하면 `원본 → 교정어`와 설명이 담긴 툴팁이 뜨고, `바꾸기` / `무시하기`
+- **다양한 입력창 지원** — `textarea`, `input`, `contenteditable`(Slack, Discord 등)
+- **팝업 검사기** — 확장 아이콘을 눌러 텍스트를 직접 붙여넣고 검사
+
+## 설치 방법 (개발자 모드)
+
+크롬 웹스토어에 등록된 확장이 아니므로, 압축 해제된 확장으로 직접 로드합니다.
+
+1. 이 저장소를 내려받습니다.
+   ```bash
+   git clone https://github.com/<your-username>/korean-spellcheck-extension.git
+   ```
+   또는 GitHub의 **Code → Download ZIP**으로 받아 압축을 풉니다.
+
+2. 크롬 주소창에 `chrome://extensions` 입력 후 이동합니다.
+
+3. 우측 상단 **개발자 모드(Developer mode)** 토글을 켭니다.
+
+4. **압축해제된 확장 프로그램을 로드합니다(Load unpacked)** 클릭 →
+   내려받은 `korean-spellcheck-extension` 폴더를 선택합니다.
+
+5. 끝입니다. 아무 웹페이지의 입력창에 한글을 입력해 보세요.
+
+> 코드를 수정한 뒤에는 `chrome://extensions`에서 이 확장의 **새로고침(↺)** 버튼을 눌러 다시 로드하세요.
+
+## 사용법
+
+- **입력창에서**: 한글을 입력하고 잠깐 멈추면 오타에 밑줄이 생깁니다. 밑줄을 클릭 → 툴팁에서 `바꾸기`.
+- **팝업에서**: 툴바의 확장 아이콘 클릭 → 텍스트 붙여넣기 → `맞춤법 검사`.
+
+## 파일 구조
+
+| 파일 | 역할 |
+|------|------|
+| `manifest.json` | 확장 설정 (Manifest V3) |
+| `background.js` | 서비스 워커. 바른한글 API 호출 + 규칙 기반 폴백 |
+| `content.js` | 페이지 입력창 감지, 하이라이트, 교정 툴팁 |
+| `content.css` | 하이라이트·툴팁 스타일 |
+| `rules.js` | API 실패 시 쓰는 로컬 맞춤법 규칙 |
+| `popup.html` / `popup.js` / `popup.css` | 팝업 검사기 UI |
+| `icons/` | 확장 아이콘 |
+
+## 동작 원리
+
+1. `content.js`가 입력창의 텍스트를 모아 `background.js`로 전달
+2. `background.js`가 `https://nara-speller.co.kr/api/check`로 POST → 오류·교정어 수신
+   (실패 시 `rules.js`의 로컬 규칙으로 폴백)
+3. `content.js`가 결과를 받아 밑줄·툴팁으로 표시하고, 사용자가 교정 적용
+
+## 주의
+
+- 비공식적으로 바른한글 API를 직접 호출합니다. 해당 서비스의 API/CORS 정책이 바뀌면 동작이 멈출 수 있습니다.
+- 개인 학습·사용 목적의 프로젝트입니다.
+
+## 라이선스
+
+MIT

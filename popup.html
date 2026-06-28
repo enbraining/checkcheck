@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>한글 맞춤법 검사기</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>한글 맞춤법 검사기</h1>
+    </header>
+
+    <div id="activeInputBanner" class="active-banner hidden">
+      <span id="activeInputLabel">입력창 감지됨</span>
+      <button id="loadInputBtn" class="btn-load">불러오기</button>
+    </div>
+
+    <div class="input-section">
+      <textarea id="inputText" placeholder="검사할 텍스트를 입력하세요..." rows="6"></textarea>
+      <div class="char-count"><span id="charCount">0</span>자</div>
+    </div>
+
+    <div class="button-row">
+      <button id="checkBtn" class="btn-primary">맞춤법 검사</button>
+      <button id="clearBtn" class="btn-secondary">지우기</button>
+    </div>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <span>검사 중...</span>
+    </div>
+
+    <div id="results" class="results hidden">
+      <div class="result-header">
+        <span id="errorCount" class="error-badge"></span>
+        <span class="result-title">검사 결과</span>
+        <button id="applyBtn" class="btn-apply hidden">입력창에 적용</button>
+      </div>
+      <div id="resultText" class="result-text"></div>
+      <div id="errorList" class="error-list"></div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

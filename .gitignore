@@ -1,0 +1,13 @@
+# 에디터 / 도구
+.claude/
+.wrangler/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 로그 / 임시
+*.log
+node_modules/
