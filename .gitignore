@@ -11,3 +11,6 @@ Thumbs.db
 # 로그 / 임시
 *.log
 node_modules/
+
+# 릴리즈 빌드
+dist/
