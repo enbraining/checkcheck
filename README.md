@@ -19,8 +19,8 @@ API를 확장에서 직접 호출합니다.
 
 크롬 웹스토어에 등록된 확장이 아니므로, 압축 해제된 확장으로 직접 로드합니다.
 
-1. [**최신 릴리즈**](https://github.com/enbraining/checkcheck/releases/latest)에서
-   `checkcheck.zip`을 내려받아 압축을 풉니다.
+1. [**최신 버전 다운로드**](https://github.com/enbraining/checkcheck/archive/refs/tags/v1.0.0.zip)
+   를 눌러 zip을 받고 압축을 풉니다. (`checkcheck-1.0.0` 폴더가 생깁니다)
 
 2. 크롬 주소창에 `chrome://extensions` 입력 후 이동합니다.
 
