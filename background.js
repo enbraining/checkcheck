@@ -1,11 +1,88 @@
 importScripts('rules.js');
 
+// ── Service Worker keep-alive (작업 중일 때만) ───────────────────
+// MV3 SW는 idle 30초 / 최대 5분이면 종료된다. 평소엔 꺼져도 메시지가
+// 오면 다시 깨어나므로 문제없지만, nara API는 텍스트를 청크·페이지로
+// 나눠 여러 번 fetch 하므로 긴 글에서는 검사 도중 SW가 종료돼 응답이
+// 유실될 수 있다. → 진행 중인 검사가 있는 동안에만 SW를 깨워둔다.
+let activeChecks   = 0;
+let keepAliveTimer = null;
+
+function startKeepAlive() {
+  if (keepAliveTimer) return;
+  keepAliveTimer = setInterval(() => {
+    chrome.runtime.getPlatformInfo(() => {});   // SW idle 타이머 리셋
+  }, 25 * 1000);
+}
+
+function stopKeepAlive() {
+  if (activeChecks > 0 || !keepAliveTimer) return;
+  clearInterval(keepAliveTimer);
+  keepAliveTimer = null;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'checkSpelling') {
-    checkSpelling(message.text).then(errors => sendResponse({ errors }));
-    return true;
+    activeChecks++;
+    startKeepAlive();
+    checkSpelling(message.text)
+      .then(errors => { recordHistory(message.text, errors, sender); sendResponse({ errors }); })
+      .catch(err => sendResponse({ error: err.message }))   // 포트가 닫힌 채 방치되지 않도록 항상 응답
+      .finally(() => { activeChecks--; stopKeepAlive(); });
+    return true;   // 비동기 응답 → 응답 전까지 메시지 포트(=SW) 유지
   }
 });
+
+// ── 검사 기록 저장 (chrome.storage.local) ───────────────────────
+// SW 메모리가 아니라 storage에 저장하므로 SW가 종료돼도 기록이 유지된다.
+const HISTORY_KEY = 'spellHistory';
+const HISTORY_MAX = 50;
+
+async function recordHistory(text, errors, sender) {
+  const trimmed = (text || '').trim();
+  if (!trimmed) return;
+
+  // 출처: content script면 도메인, 팝업이면 '직접 입력'
+  let src = '직접 입력';
+  if (sender?.tab?.url) {
+    try { src = new URL(sender.tab.url).hostname; } catch { src = '웹페이지'; }
+  }
+
+  // 교정 후 텍스트: 원문에 모든 오류 교정을 적용 (긴 단어 먼저: 부분 겹침 방지)
+  let corrected = trimmed;
+  const seenWrong = new Set();
+  const applied = errors
+    .filter(e => e.wrong && e.correct && !seenWrong.has(e.wrong) && seenWrong.add(e.wrong))
+    .sort((a, b) => b.wrong.length - a.wrong.length);
+  for (const e of applied) corrected = corrected.split(e.wrong).join(e.correct);
+
+  const entry = {
+    ts: Date.now(),
+    text: trimmed.slice(0, 300),         // 검사 전 원문
+    corrected: corrected.slice(0, 300),  // 교정 후 결과
+    errorCount: errors.length,
+    errors: errors.slice(0, 30).map(e => ({ wrong: e.wrong, correct: e.correct })),
+    src,
+  };
+
+  const { [HISTORY_KEY]: history = [] } = await chrome.storage.local.get(HISTORY_KEY);
+
+  const prev = history[0];
+  const recent = prev && prev.src === src && (entry.ts - prev.ts < 3 * 60 * 1000);
+
+  // 방금 적용한 교정 결과를 재검사한 것 → 바로 위 항목의 '후'와 동일하므로 기록 안 함
+  if (recent && prev.corrected === entry.text) return;
+
+  // 같은 출처에서 이어 친 텍스트(타이핑 진행)는 한 항목으로 합쳐 폭주 방지
+  const isTypingProgress = recent &&
+    (entry.text.startsWith(prev.text) || prev.text.startsWith(entry.text));
+
+  if (isTypingProgress) history[0] = entry;
+  else history.unshift(entry);
+
+  if (history.length > HISTORY_MAX) history.length = HISTORY_MAX;
+  await chrome.storage.local.set({ [HISTORY_KEY]: history });
+}
 
 // ── 메인 검사 함수 ───────────────────────────────────────────────
 async function checkSpelling(text) {

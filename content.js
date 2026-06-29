@@ -33,13 +33,15 @@
       </div>
       <div class="ksc-tip-actions">
         <button class="ksc-btn-replace">바꾸기</button>
+        <button class="ksc-btn-replace-all">전체 바꾸기</button>
         <button class="ksc-btn-ignore">무시하기</button>
       </div>
       <div class="ksc-tip-nav"><span class="ksc-tip-counter"></span></div>
     `;
-    el.querySelector('.ksc-tip-close').addEventListener('mousedown',      e => { e.preventDefault(); hideTip(); });
-    el.querySelector('.ksc-btn-replace').addEventListener('mousedown', e => { e.preventDefault(); doReplace(); });
-    el.querySelector('.ksc-btn-ignore').addEventListener('mousedown',  e => { e.preventDefault(); doIgnore(); });
+    el.querySelector('.ksc-tip-close').addEventListener('mousedown',       e => { e.preventDefault(); hideTip(); });
+    el.querySelector('.ksc-btn-replace').addEventListener('mousedown',     e => { e.preventDefault(); doReplace(); });
+    el.querySelector('.ksc-btn-replace-all').addEventListener('mousedown', e => { e.preventDefault(); doReplaceAll(); });
+    el.querySelector('.ksc-btn-ignore').addEventListener('mousedown',      e => { e.preventDefault(); doIgnore(); });
     document.body.appendChild(el);
     return el;
   }
@@ -80,6 +82,21 @@
     return '맞춤법 교정';
   }
 
+  /* ── SW로 검사 요청 (cold-start 1회 재시도) ────────
+     SW가 idle로 종료돼 있던 경우, 첫 sendMessage가 드물게
+     "message port closed" 로 실패할 수 있다. 한 번만 재시도. */
+  async function sendCheck(text, retried = false) {
+    try {
+      return await chrome.runtime.sendMessage({ action: 'checkSpelling', text });
+    } catch (e) {
+      if (!retried) {
+        await new Promise(r => setTimeout(r, 100));   // SW 깨어날 시간
+        return sendCheck(text, true);
+      }
+      throw e;
+    }
+  }
+
   /* ── 검사 실행 ─────────────────────────────────── */
   async function runCheck() {
     if (!currentInput || busy) return;
@@ -87,7 +104,7 @@
     if (!text || !/[가-힣]/.test(text)) { clearHighlights(); hideTip(); return; }
 
     try {
-      const res = await chrome.runtime.sendMessage({ action: 'checkSpelling', text });
+      const res = await sendCheck(text);
       if (res?.error) throw new Error(res.error);
 
       const errors = (res.errors || [])
@@ -267,6 +284,51 @@
       if (errorIndex < 0) { hideTip(); return; }
       showTextareaError();
     }
+  }
+
+  /* ── 전체 바꾸기 (한 번에 모든 오류 교정) ────────────
+     교정문은 문자열 연산으로 먼저 완성하고(위치 어긋남 없음),
+     적용은 '단일 바꾸기'와 동일한 paste 방식으로 통째 교체한다.
+     (이 에디터는 paste로는 선택 영역이 지워지지만 execCommand
+      insertText로는 안 지워져 옛 텍스트가 남기 때문) */
+  async function doReplaceAll() {
+    if (!currentInput || busy) return;
+
+    const src = currentInput.isContentEditable ? errorList : pendingErrors;
+    const seen = new Set();
+    const corrections = src
+      .filter(e => e.wrong && e.correct && !ignoredWords.has(e.wrong)
+                   && !seen.has(e.wrong) && seen.add(e.wrong))
+      .sort((a, b) => b.wrong.length - a.wrong.length);   // 긴 단어 먼저: 부분 겹침 방지
+    if (corrections.length === 0) return;
+
+    // 1) 현재 텍스트에서 모든 오류를 문자열 연산으로 교정
+    let t = getInputText(currentInput);
+    for (const e of corrections) t = t.split(e.wrong).join(e.correct);
+
+    hideTip();
+
+    // 2-a) textarea/input: 네이티브 value 세터로 통째 교체 (확실)
+    if (!currentInput.isContentEditable) {
+      setInputText(currentInput, t);
+      pendingErrors = [];
+      clearHighlights();
+      return;
+    }
+
+    // 2-b) contenteditable: 전체 내용을 한 번에 선택 → 단일 바꾸기와 같은
+    //      paste 방식으로 한 번만 교체 (선택 영역이 정상 삭제됨)
+    busy = true;
+    try {
+      currentInput.focus();
+      const range = document.createRange();
+      range.selectNodeContents(currentInput);
+      await selectAndInsert(range, t);
+      moveCaretToEnd();
+    } finally { busy = false; }
+    errorList = [];
+    clearHighlights();
+    scheduleRecheck();
   }
 
   function doIgnore() {

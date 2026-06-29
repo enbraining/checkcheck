@@ -104,6 +104,12 @@
 }
 .ksc-btn-replace:hover { background: #1557b0; }
 
+.ksc-btn-replace-all {
+  background: #34a853;
+  color: #fff;
+}
+.ksc-btn-replace-all:hover { background: #2d8f46; }
+
 .ksc-btn-ignore {
   background: #f1f3f4;
   color: #555;
