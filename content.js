@@ -2,12 +2,28 @@
   const TIP_ID      = '__ksc_tip__';
   const HL_NAME     = 'ksc-spell';
   const DEBOUNCE_MS = 900;
+  const AUTO_CHECK_KEY = 'autoCheckEnabled';
 
   let currentInput  = null;
   let debounceTimer = null;
   let tipEl         = null;
   let ignoredWords  = new Set();
   let busy          = false;   // 프로그램 교체 중 재검사 차단
+  let autoCheckEnabled = true; // 웹페이지 입력창 자동 검사 on/off (팝업에서 설정)
+
+  chrome.storage?.local.get(AUTO_CHECK_KEY, data => {
+    if (data[AUTO_CHECK_KEY] === false) autoCheckEnabled = false;
+  });
+  chrome.storage?.onChanged.addListener((changes, area) => {
+    if (area === 'local' && AUTO_CHECK_KEY in changes) {
+      autoCheckEnabled = changes[AUTO_CHECK_KEY].newValue !== false;
+      if (!autoCheckEnabled) {
+        clearTimeout(debounceTimer);
+        clearHighlights();
+        hideTip();
+      }
+    }
+  });
 
   // contenteditable: Range 기반 오류 목록 (span 주입 안 함)
   let errorList = [];   // [{wrong, correct, help, range}]
@@ -402,6 +418,7 @@
       clearHighlights();
       hideTip();
     }
+    if (!autoCheckEnabled) return;
     const text = getInputText(currentInput).trim();
     if (text && /[가-힣]/.test(text)) {
       clearTimeout(debounceTimer);
@@ -422,6 +439,7 @@
     clearTimeout(debounceTimer);
     hideTip();
     clearHighlights();
+    if (!autoCheckEnabled) return;
     debounceTimer = setTimeout(runCheck, DEBOUNCE_MS);
   }, true);
 

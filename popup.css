@@ -18,6 +18,45 @@ header h1 {
 }
 header h1::before { content: '✍️'; margin-right: 6px; }
 
+/* 자동 검사 토글 */
+.auto-check-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.auto-check-label { font-size: 12px; color: #555; font-weight: 600; }
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+  flex: none;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #ccc;
+  border-radius: 20px;
+  transition: background .15s;
+}
+.switch .slider::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .15s;
+}
+.switch input:checked + .slider { background: #1a73e8; }
+.switch input:checked + .slider::before { transform: translateX(14px); }
+
 /* 활성 인풋 배너 */
 .active-banner {
   display: flex;

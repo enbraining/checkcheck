@@ -13,10 +13,27 @@ const errorList = document.getElementById('errorList');
 const errorCount = document.getElementById('errorCount');
 const historyList = document.getElementById('historyList');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+const autoCheckToggle = document.getElementById('autoCheckToggle');
 
 let activeTab = null;
 let hasActiveInput = false;
 let correctedText = '';
+
+// ── 웹페이지 자동 검사 on/off ─────────────────────────────────────
+const AUTO_CHECK_KEY = 'autoCheckEnabled';
+
+async function loadAutoCheckSetting() {
+  if (typeof chrome === 'undefined' || !chrome.storage) return;
+  const data = await chrome.storage.local.get(AUTO_CHECK_KEY);
+  autoCheckToggle.checked = data[AUTO_CHECK_KEY] !== false;
+}
+
+autoCheckToggle.addEventListener('change', () => {
+  if (typeof chrome === 'undefined' || !chrome.storage) return;
+  chrome.storage.local.set({ [AUTO_CHECK_KEY]: autoCheckToggle.checked });
+});
+
+loadAutoCheckSetting();
 
 // 팝업 열릴 때 활성 탭의 포커스된 인풋 확인
 (async () => {
